@@ -21,6 +21,7 @@ var bibtext = `
 	journals/tdsc/zorfu/AndersonMRVM15  ,
 	author  ={Hein Meling}  ,
 	title  =  {Some Title},
+
 }
 
 `

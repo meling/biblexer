@@ -53,7 +53,6 @@ var key = map[string]itemType{
 	"=":       itemTagNameContentDelim,
 }
 
-//TODO: Rename lex-functions to use the new bibtex terminology
 //TODO: Add support for ignoring comments later
 //TODO: Add support for @string, @preamble, @comment
 //TODO: Add support for concatination #
@@ -103,9 +102,9 @@ func lexEntryType(l *lexer) stateFn {
 			// discard spaces after entry type (to avoid emitting with spaces)
 			l.discard()
 		case r == eof:
-			return l.errorf("unclosed action")
+			return l.errorf("unexpected eof at line %d", l.lineNumber())
 		default:
-			return l.errorf("unrecognized character in action: %#U", r)
+			return l.errorf("unexpected character %#U at line %d", r, l.lineNumber())
 		}
 	}
 }
@@ -131,9 +130,9 @@ func lexCiteKey(l *lexer) stateFn {
 			// discard spaces after cite key (to avoid emitting with spaces)
 			l.discard()
 		case r == eof:
-			return l.errorf("unclosed action")
+			return l.errorf("unexpected eof at line %d", l.lineNumber())
 		default:
-			return l.errorf("unrecognized character in action: %#U", r)
+			return l.errorf("unexpected character %#U at line %d", r, l.lineNumber())
 		}
 	}
 }
@@ -170,9 +169,9 @@ func lexTagName(l *lexer) stateFn {
 			// discard spaces after tag name (to avoid emitting with spaces)
 			l.discard()
 		case r == eof:
-			return l.errorf("unclosed action")
+			return l.errorf("unexpected eof at line %d", l.lineNumber())
 		default:
-			return l.errorf("unrecognized character in action: %#U", r)
+			return l.errorf("unexpected character %#U at line %d", r, l.lineNumber())
 		}
 	}
 }
@@ -188,15 +187,13 @@ func lexContentStartDelim(l *lexer) stateFn {
 	l.ignoreSpaces()
 	for {
 		switch r := l.next(); {
-		// case isSpace(r):
-		// 	l.ignore()
 		case r == '{':
 			l.emit(itemContentStartDelim)
 			return lexTagContent
 		case r == eof:
-			return l.errorf("unclosed action")
+			return l.errorf("unexpected eof at line %d", l.lineNumber())
 		default:
-			return l.errorf("unrecognized character in action: %#U", r)
+			return l.errorf("unexpected character %#U at line %d", r, l.lineNumber())
 		}
 	}
 }
@@ -212,9 +209,9 @@ func lexTagContent(l *lexer) stateFn {
 			l.emit(itemTagContent)
 			return lexContentStopDelim
 		case r == eof:
-			return l.errorf("unclosed action")
+			return l.errorf("unexpected eof at line %d", l.lineNumber())
 		default:
-			return l.errorf("unrecognized character in action: %#U", r)
+			return l.errorf("unexpected character %#U at line %d", r, l.lineNumber())
 		}
 	}
 }
@@ -236,9 +233,9 @@ func lexTagDone(l *lexer) stateFn {
 			l.emit(itemTagDelim)
 			return lexTagName
 		case r == eof:
-			return l.errorf("unclosed action")
+			return l.errorf("unexpected eof at line %d", l.lineNumber())
 		default:
-			return l.errorf("unrecognized character in action: %#U", r)
+			return l.errorf("unexpected character %#U at line %d", r, l.lineNumber())
 		}
 	}
 }
