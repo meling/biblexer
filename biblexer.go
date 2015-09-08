@@ -59,8 +59,8 @@ const (
 	commentDelim = "%"
 )
 
-// lexText scans until an opening action delimiter, "@".
-func lexText(l *lexer) stateFn {
+// lex scans until an opening action delimiter, "@".
+func lex(l *lexer) stateFn {
 	for {
 		if strings.HasPrefix(l.input[l.pos:], "@") {
 			if l.pos > l.start {
@@ -75,6 +75,8 @@ func lexText(l *lexer) stateFn {
 		}
 	}
 }
+
+//TODO Rename lex-functions to use the new bibtex terminology
 
 // lexEntryTypeDelim scans the entry type delimiter, which is known to be present.
 func lexEntryTypeDelim(l *lexer) stateFn {
@@ -133,7 +135,7 @@ func lexTagDelim(l *lexer) stateFn {
 // lexRightEntryDelim scans the right entry delimiter, which is known to be present.
 func lexRightEntryDelim(l *lexer) stateFn {
 	l.emit1(itemEntryStopDelim) // absorb '}'
-	return lexText
+	return lex
 }
 
 // lexTag scans the tag key, which can be any non-spaced string.
