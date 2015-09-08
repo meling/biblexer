@@ -73,19 +73,14 @@ func lex(l *lexer) stateFn {
 				// ignore anything that comes before the @ delimiter.
 				l.ignore()
 			}
-			return lexEntryTypeDelim
+			l.emit1(itemEntryTypeDelim) // absorb '@'
+			return lexEntryType
 		}
 		if l.next() == eof {
 			l.emit(itemEOF)
 			return nil
 		}
 	}
-}
-
-// lexEntryTypeDelim scans the entry type delimiter, which is known to be present.
-func lexEntryTypeDelim(l *lexer) stateFn {
-	l.emit1(itemEntryTypeDelim) // absorb '@'
-	return lexEntryType
 }
 
 // lexEntryType scans the entry type.
@@ -97,7 +92,8 @@ func lexEntryType(l *lexer) stateFn {
 		case r == '{':
 			l.backup()
 			l.emit(itemEntryType)
-			return lexEntryStartDelim
+			l.emit1(itemEntryStartDelim) // absorb '{'
+			return lexCiteKey
 		case isSpace(r):
 			// discard spaces after entry type (to avoid emitting with spaces)
 			l.discard()
@@ -107,12 +103,6 @@ func lexEntryType(l *lexer) stateFn {
 			return l.errorf("unexpected character %#U at line %d", r, l.lineNumber())
 		}
 	}
-}
-
-// lexEntryStartDelim scans the entry delimiter, which is known to be present.
-func lexEntryStartDelim(l *lexer) stateFn {
-	l.emit1(itemEntryStartDelim) // absorb '{'
-	return lexCiteKey
 }
 
 // lexCiteKey scans the cite key.
@@ -125,7 +115,8 @@ func lexCiteKey(l *lexer) stateFn {
 		case r == ',':
 			l.backup()
 			l.emit(itemCiteKey)
-			return lexTagDelim
+			l.emit1(itemTagDelim) // absorb ','
+			return lexTagName
 		case isSpace(r):
 			// discard spaces after cite key (to avoid emitting with spaces)
 			l.discard()
@@ -137,26 +128,15 @@ func lexCiteKey(l *lexer) stateFn {
 	}
 }
 
-// lexTagDelim scans the tag delimiter, which is known to be present.
-func lexTagDelim(l *lexer) stateFn {
-	l.emit1(itemTagDelim) // absorb ','
-	return lexTagName
-}
-
-// lexEntryStopDelim scans the entry stop delimiter, which is known to be present.
-func lexEntryStopDelim(l *lexer) stateFn {
-	l.emit1(itemEntryStopDelim) // absorb '}'
-	// start over, searching for the next bib entry
-	return lex
-}
-
 // lexTagName scans the tag name, which can be any non-spaced string.
 func lexTagName(l *lexer) stateFn {
 	// ignore spaces before tag name
 	l.ignoreSpaces()
 	for {
 		if strings.HasPrefix(l.input[l.pos:], "}") {
-			return lexEntryStopDelim
+			l.emit1(itemEntryStopDelim) // absorb '}'
+			// start over, searching for the next bib entry
+			return lex
 		}
 		switch r := l.next(); {
 		case isAlphaNumeric(r):
@@ -164,7 +144,8 @@ func lexTagName(l *lexer) stateFn {
 		case r == '=':
 			l.backup()
 			l.emit(itemTagName)
-			return lexTagNameContentDelim
+			l.emit1(itemTagNameContentDelim) // absorb '='
+			return lexContentStartDelim
 		case isSpace(r):
 			// discard spaces after tag name (to avoid emitting with spaces)
 			l.discard()
@@ -174,12 +155,6 @@ func lexTagName(l *lexer) stateFn {
 			return l.errorf("unexpected character %#U at line %d", r, l.lineNumber())
 		}
 	}
-}
-
-// lexTagNameContentDelim scans the name-content delimiter, which is known to be present.
-func lexTagNameContentDelim(l *lexer) stateFn {
-	l.emit1(itemTagNameContentDelim) // absorb '='
-	return lexContentStartDelim
 }
 
 // lexContentStartDelim scans the name-content start delimiter.
@@ -207,19 +182,14 @@ func lexTagContent(l *lexer) stateFn {
 		case r == '}':
 			l.backup()
 			l.emit(itemTagContent)
-			return lexContentStopDelim
+			l.emit1(itemContentStopDelim) // absorb '}'
+			return lexTagDone
 		case r == eof:
 			return l.errorf("unexpected eof at line %d", l.lineNumber())
 		default:
 			return l.errorf("unexpected character %#U at line %d", r, l.lineNumber())
 		}
 	}
-}
-
-// lexContentStopDelim scans the name-content stop delimiter, which is known to be present.
-func lexContentStopDelim(l *lexer) stateFn {
-	l.emit1(itemContentStopDelim) // absorb '}'
-	return lexTagDone
 }
 
 //TODO: this should be reusing lexTagDelim
