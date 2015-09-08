@@ -87,6 +87,7 @@ func lexStart(l *lexer) stateFn {
 
 // lexEntryType scans the entry type.
 func lexEntryType(l *lexer) stateFn {
+	l.ignoreSpaces()
 	for {
 		switch r := l.next(); {
 		case isAlphaNumeric(r):
@@ -130,7 +131,7 @@ func lexCiteKey(l *lexer) stateFn {
 	}
 }
 
-// lexTagName scans the tag name, which can be any non-spaced string.
+// lexTagName scans the tag name.
 func lexTagName(l *lexer) stateFn {
 	l.ignoreSpaces()
 	for {

@@ -1,14 +1,11 @@
 package bibtex
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 //TODO: Make tests that have space in entry type and between @ and entry type
 
 // "@article", "pass",
-// "@ article", "fail",
+// "@ article", "pass", Actually works with bibtex command
 // "@art icle", "fail",
 
 //TODO: Make test case that for some bibtex input
@@ -16,7 +13,7 @@ import (
 
 var bibtext = `
 
-@article  {
+@  article  {
 
 	journals/tdsc/zorfu/AndersonMRVM15  ,
 	author  ={Hein Meling}  ,
@@ -25,6 +22,28 @@ var bibtext = `
 }
 
 `
+
+var expected = []itemType{
+	itemEntryTypeDelim,
+	itemEntryType,
+	itemEntryStartDelim,
+	itemCiteKey,
+	itemTagDelim,
+	itemTagName,
+	itemTagNameContentDelim,
+	itemTagContentStartDelim,
+	itemTagContent,
+	itemTagContentStopDelim,
+	itemTagDelim,
+	itemTagName,
+	itemTagNameContentDelim,
+	itemTagContentStartDelim,
+	itemTagContent,
+	itemTagContentStopDelim,
+	itemTagDelim,
+	itemEntryStopDelim,
+	itemEOF,
+}
 
 // booktitle="hell yeah",
 // testtitle="hell {So cool} yeah",
@@ -42,7 +61,13 @@ var bibtext = `
 
 func TestLexer(t *testing.T) {
 	l := NewLexer("bib", bibtext)
+	i := 0
 	for it := l.nextItem(); it.typ != itemEOF; it = l.nextItem() {
-		fmt.Println(it)
+		if it.typ != expected[i] {
+			t.Errorf("Got %s, expected %s", it.String(), expected[i])
+		}
+		i++
+		t.Log(it)
+		// fmt.Println(it)
 	}
 }
