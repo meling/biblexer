@@ -27,29 +27,29 @@ func (i item) String() string {
 const (
 	itemError itemType = iota // error occurred; value is text of error
 	itemEOF
-	itemComment          // comment (%)
-	itemEntryType        // entry type
-	itemEntryTypeDelim   // entry type delimiter (@)
-	itemCiteKey          // cite key
-	itemTagName          // the tag key (on left of =)
-	itemTagKeyValueDelim // the delimiter separating key and value (=)
-	itemTagValue         // quoted string (includes quotes)
-	itemTagDelim         // the tag delimiter (,)
-	itemLeftEntryDelim   // left entry delimiter ({)
-	itemRightEntryDelim  // right entry delimiter (})
-	itemValueLeftDelim   // value left delimiter ({)
-	itemValueRightDelim  // value right delimiter (})
-	itemConcat           // the concatination symbol (#)
+	itemComment             // delimiter for comments (%)
+	itemEntryTypeDelim      // entry type delimiter (@)
+	itemEntryType           // the entry type
+	itemEntryStartDelim     // entry start delimiter ({)
+	itemEntryStopDelim      // entry stop delimiter (})
+	itemCiteKey             // the cite key
+	itemTagName             // the tag name (on left of =)
+	itemTagNameContentDelim // delimiter separating name and content (=)
+	itemTagContent          // the content for the tag
+	itemTagDelim            // delimiter separating name-content pairs or tags (,)
+	itemValueLeftDelim      // value left delimiter ({)
+	itemValueRightDelim     // value right delimiter (})
+	itemConcat              // the concatination symbol (#)
 )
 
 var key = map[string]itemType{
 	"citekey": itemCiteKey,
 	"@":       itemEntryTypeDelim,
-	"{":       itemLeftEntryDelim,
-	"}":       itemRightEntryDelim,
+	"{":       itemEntryStartDelim,
+	"}":       itemEntryStopDelim,
 	"#":       itemConcat,
 	",":       itemTagDelim,
-	"=":       itemTagKeyValueDelim,
+	"=":       itemTagNameContentDelim,
 }
 
 // state functions
@@ -102,7 +102,7 @@ func lexEntryType(l *lexer) stateFn {
 
 // lexLeftEntryDelim scans the left entry delimiter, which is known to be present.
 func lexLeftEntryDelim(l *lexer) stateFn {
-	l.emit1(itemLeftEntryDelim) // absorb '{'
+	l.emit1(itemEntryStartDelim) // absorb '{'
 	return lexCiteKey
 }
 
@@ -132,7 +132,7 @@ func lexTagDelim(l *lexer) stateFn {
 
 // lexRightEntryDelim scans the right entry delimiter, which is known to be present.
 func lexRightEntryDelim(l *lexer) stateFn {
-	l.emit1(itemRightEntryDelim) // absorb '}'
+	l.emit1(itemEntryStopDelim) // absorb '}'
 	return lexText
 }
 
@@ -170,7 +170,7 @@ func lexTagKey(l *lexer) stateFn {
 
 // lexTagKeyValueDelim scans the tag key-value delimiter, which is known to be present.
 func lexTagKeyValueDelim(l *lexer) stateFn {
-	l.emit1(itemTagKeyValueDelim) // absorb '='
+	l.emit1(itemTagNameContentDelim) // absorb '='
 	return lexTagValueLeftDelim
 }
 
@@ -199,7 +199,7 @@ func lexTagValue(l *lexer) stateFn {
 			// absorb
 		case r == '}':
 			l.backup()
-			l.emit(itemTagValue)
+			l.emit(itemTagContent)
 			return lexValueRightDelim
 		case r == eof:
 			return l.errorf("unclosed action")
