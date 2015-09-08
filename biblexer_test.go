@@ -11,7 +11,7 @@ import (
 // "@ article", "fail",
 // "@art icle", "fail",
 
-// TODO: Make test case that for some bibtex input
+//TODO: Make test case that for some bibtex input
 // compares against an expected sequence of itemType values.
 
 var bibtext = `

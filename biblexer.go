@@ -52,10 +52,16 @@ var key = map[string]itemType{
 	"=":       itemTagNameContentDelim,
 }
 
+//TODO: Rename lex-functions to use the new bibtex terminology
+//TODO: Add support for ignoring comments later
+//TODO: Add support for @string, @preamble, @comment
+//TODO: Add support for concatination #
+//TODO: Add support for quote-based ("") content
+//TODO: Add support for braces in content
+
 // state functions
 
 const (
-	// TODO: Add support for ignoring comments later
 	commentDelim = "%"
 )
 
@@ -75,8 +81,6 @@ func lex(l *lexer) stateFn {
 		}
 	}
 }
-
-//TODO Rename lex-functions to use the new bibtex terminology
 
 // lexEntryTypeDelim scans the entry type delimiter, which is known to be present.
 func lexEntryTypeDelim(l *lexer) stateFn {
