@@ -64,6 +64,12 @@ func (l *lexer) emit(t itemType) {
 	l.start = l.pos
 }
 
+// emit passes an item back to the client.
+func (l *lexer) emit1(t itemType) {
+	l.pos++
+	l.emit(t)
+}
+
 // ignore skips over the pending input before this point.
 func (l *lexer) ignore() {
 	l.start = l.pos
@@ -124,7 +130,7 @@ func (l *lexer) nextItem() item {
 	}
 }
 
-// lex creates a new scanner for the input string.
+// NewLexer creates a new scanner for the input string.
 func NewLexer(name, input string) *lexer {
 	l := &lexer{
 		name:  name,

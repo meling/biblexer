@@ -20,10 +20,6 @@ func (i item) String() string {
 		return "EOF"
 	case i.typ == itemError:
 		return i.val
-		// case i.typ > itemKeyword:
-		// 	return fmt.Sprintf("<%s>", i.val)
-		// case len(i.val) > 10:
-		// 	return fmt.Sprintf("%.10q...", i.val)
 	}
 	return fmt.Sprintf("%q", i.val)
 }
@@ -35,16 +31,15 @@ const (
 	itemEntryType        // entry type
 	itemEntryTypeDelim   // entry type delimiter (@)
 	itemCiteKey          // cite key
-	itemTagDelim         // tag delimiter (,)
+	itemTagName          // the tag key (on left of =)
 	itemTagKeyValueDelim // the delimiter separating key and value (=)
+	itemTagValue         // quoted string (includes quotes)
+	itemTagDelim         // the tag delimiter (,)
 	itemLeftEntryDelim   // left entry delimiter ({)
 	itemRightEntryDelim  // right entry delimiter (})
 	itemValueLeftDelim   // value left delimiter ({)
 	itemValueRightDelim  // value right delimiter (})
 	itemConcat           // the concatination symbol (#)
-	//TODO: should be itemTagKey and itemTagValue
-	itemKey   // the key (on left of =)
-	itemValue // quoted string (includes quotes)
 )
 
 var key = map[string]itemType{
@@ -83,8 +78,7 @@ func lexText(l *lexer) stateFn {
 
 // lexEntryTypeDelim scans the entry type delimiter, which is known to be present.
 func lexEntryTypeDelim(l *lexer) stateFn {
-	l.pos += 1 // absorb '@'
-	l.emit(itemEntryTypeDelim)
+	l.emit1(itemEntryTypeDelim) // absorb '@'
 	return lexEntryType
 }
 
@@ -108,8 +102,7 @@ func lexEntryType(l *lexer) stateFn {
 
 // lexLeftEntryDelim scans the left entry delimiter, which is known to be present.
 func lexLeftEntryDelim(l *lexer) stateFn {
-	l.pos += 1 // absorb '{'
-	l.emit(itemLeftEntryDelim)
+	l.emit1(itemLeftEntryDelim) // absorb '{'
 	return lexCiteKey
 }
 
@@ -133,15 +126,13 @@ func lexCiteKey(l *lexer) stateFn {
 
 // lexTagDelim scans the tag delimiter, which is known to be present.
 func lexTagDelim(l *lexer) stateFn {
-	l.pos += 1 // absorb ','
-	l.emit(itemTagDelim)
+	l.emit1(itemTagDelim) // absorb ','
 	return lexTagKey
 }
 
 // lexRightEntryDelim scans the right entry delimiter, which is known to be present.
 func lexRightEntryDelim(l *lexer) stateFn {
-	l.pos += 1 // absorb '}'
-	l.emit(itemRightEntryDelim)
+	l.emit1(itemRightEntryDelim) // absorb '}'
 	return lexText
 }
 
@@ -161,8 +152,9 @@ func lexTagKey(l *lexer) stateFn {
 			// ignore spaces until tag key is found
 			l.ignore()
 		case r == '=':
+			// found key-value delimiter; emit tag key and remove surrounding spaces
 			l.backupN(spaces)
-			l.emit(itemKey)
+			l.emit(itemTagName)
 			l.forwardN(spaces)
 			return lexTagKeyValueDelim
 		case isSpace(r):
@@ -178,8 +170,7 @@ func lexTagKey(l *lexer) stateFn {
 
 // lexTagKeyValueDelim scans the tag key-value delimiter, which is known to be present.
 func lexTagKeyValueDelim(l *lexer) stateFn {
-	l.pos += 1 // absorb '='
-	l.emit(itemTagKeyValueDelim)
+	l.emit1(itemTagKeyValueDelim) // absorb '='
 	return lexTagValueLeftDelim
 }
 
@@ -208,7 +199,7 @@ func lexTagValue(l *lexer) stateFn {
 			// absorb
 		case r == '}':
 			l.backup()
-			l.emit(itemValue)
+			l.emit(itemTagValue)
 			return lexValueRightDelim
 		case r == eof:
 			return l.errorf("unclosed action")
@@ -220,8 +211,7 @@ func lexTagValue(l *lexer) stateFn {
 
 // lexKeyValueDelim scans the tag key-value delimiter, which is known to be present.
 func lexValueRightDelim(l *lexer) stateFn {
-	l.pos += 1 // absorb '}'
-	l.emit(itemValueRightDelim)
+	l.emit1(itemValueRightDelim) // absorb '}'
 	return lexTagDone
 }
 
@@ -232,53 +222,6 @@ func lexTagDone(l *lexer) stateFn {
 		case r == ',':
 			l.emit(itemTagDelim)
 			return lexTagKey
-		case r == eof:
-			return l.errorf("unclosed action")
-		default:
-			return l.errorf("unrecognized character in action: %#U", r)
-		}
-	}
-}
-
-// lexTagValue scans the elements inside the main bib entry.
-func lexTagValueOLD(l *lexer) stateFn {
-	for {
-		switch r := l.next(); {
-		case isAlphaNumeric(r) || isSpace(r):
-			// absorb
-		case r == ',':
-			//TODO: This code seems to be dead (have no impact)??
-			l.backup()
-			l.emit(itemValue)
-			l.pos += 1 // absorb ','
-			l.emit(itemTagDelim)
-			return lexTagKey
-		case isSpace(r):
-			l.ignore()
-		case r == '{':
-			l.emit(itemValueLeftDelim)
-			// l.ignore()
-		case r == '"':
-			e := l.peek()
-			if e == ',' || e == '}' {
-				l.backup()
-				l.emit(itemValue)
-				l.pos += 2 // absorb '",' or '"}'
-				// l.emit(itemValueRightDelim)
-				l.ignore()
-				return lexTagKey
-			}
-			l.ignore()
-		case r == '}':
-			e := l.peek()
-			if e == ',' || e == '}' {
-				l.backup()
-				l.emit(itemValue)
-				l.pos += 2 // absorb '},' or '}}'
-				l.ignore()
-				return lexTagKey
-			}
-			l.ignore()
 		case r == eof:
 			return l.errorf("unclosed action")
 		default:
