@@ -27,20 +27,20 @@ func (i item) String() string {
 const (
 	itemError itemType = iota // error occurred; value is text of error
 	itemEOF
-	itemComment             // delimiter for comments (%)
-	itemEntryTypeDelim      // entry type delimiter (@)
-	itemEntryType           // the entry type
-	itemEntryStartDelim     // entry start delimiter ({)
-	itemEntryStopDelim      // entry stop delimiter (})
-	itemCiteKey             // the cite key
-	itemTagName             // the tag name (on left of =)
-	itemTagNameContentDelim // delimiter separating name and content (=)
-	itemTagContent          // the content for the tag
-	itemTagDelim            // delimiter separating name-content pairs or tags (,)
-	itemContentStartDelim   // content start delimiter ({)
-	itemContentStopDelim    // content stop delimiter (})
-	itemContentQuoteDelim   // content start/stop delimiter (")
-	itemConcat              // the concatination symbol (#)
+	itemComment              // delimiter for comments (%)
+	itemEntryTypeDelim       // entry type delimiter (@)
+	itemEntryType            // the entry type
+	itemEntryStartDelim      // entry start delimiter ({)
+	itemEntryStopDelim       // entry stop delimiter (})
+	itemCiteKey              // the cite key
+	itemTagName              // the tag name (on left of =)
+	itemTagNameContentDelim  // delimiter separating name and content (=)
+	itemTagContent           // the content for the tag
+	itemTagDelim             // delimiter separating name-content pairs or tags (,)
+	itemTagContentStartDelim // content start delimiter ({)
+	itemTagContentStopDelim  // content stop delimiter (})
+	itemTagContentQuoteDelim // content start/stop delimiter (")
+	itemConcat               // the concatination symbol (#)
 )
 
 var key = map[string]itemType{
@@ -65,8 +65,10 @@ const (
 	commentDelim = "%"
 )
 
-// lex scans the input until an entry type delimiter, "@".
-func lex(l *lexer) stateFn {
+// lexStart scans the input for bibtex entries.
+// lexStart scans until an entry type delimiter "@" is found, and
+// starts to process the rest of the bibtex entries in the input.
+func lexStart(l *lexer) stateFn {
 	for {
 		if strings.HasPrefix(l.input[l.pos:], "@") {
 			if l.pos > l.start {
@@ -130,13 +132,12 @@ func lexCiteKey(l *lexer) stateFn {
 
 // lexTagName scans the tag name, which can be any non-spaced string.
 func lexTagName(l *lexer) stateFn {
-	// ignore spaces before tag name
 	l.ignoreSpaces()
 	for {
 		if strings.HasPrefix(l.input[l.pos:], "}") {
 			l.emit1(itemEntryStopDelim) // absorb '}'
-			// start over, searching for the next bib entry
-			return lex
+			// search for the next bib entry
+			return lexStart
 		}
 		switch r := l.next(); {
 		case isAlphaNumeric(r):
@@ -163,7 +164,7 @@ func lexContentStartDelim(l *lexer) stateFn {
 	for {
 		switch r := l.next(); {
 		case r == '{':
-			l.emit(itemContentStartDelim)
+			l.emit(itemTagContentStartDelim)
 			return lexTagContent
 		case r == eof:
 			return l.errorf("unexpected eof at line %d", l.lineNumber())
@@ -182,8 +183,8 @@ func lexTagContent(l *lexer) stateFn {
 		case r == '}':
 			l.backup()
 			l.emit(itemTagContent)
-			l.emit1(itemContentStopDelim) // absorb '}'
-			return lexTagDone
+			l.emit1(itemTagContentStopDelim) // absorb '}'
+			return lexTagDelim
 		case r == eof:
 			return l.errorf("unexpected eof at line %d", l.lineNumber())
 		default:
@@ -192,10 +193,8 @@ func lexTagContent(l *lexer) stateFn {
 	}
 }
 
-//TODO: this should be reusing lexTagDelim
-
-// lexTagDone scans the elements inside the main bib entry.
-func lexTagDone(l *lexer) stateFn {
+// lexTagDelim scans the tag delimiter.
+func lexTagDelim(l *lexer) stateFn {
 	l.ignoreSpaces()
 	for {
 		switch r := l.next(); {

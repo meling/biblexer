@@ -149,7 +149,7 @@ func NewLexer(name, input string) *lexer {
 	l := &lexer{
 		name:  name,
 		input: input,
-		state: lex,
+		state: lexStart,
 		items: make(chan item, 2), // Two items sufficient.
 	}
 	return l
