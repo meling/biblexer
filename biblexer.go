@@ -37,8 +37,9 @@ const (
 	itemTagNameContentDelim // delimiter separating name and content (=)
 	itemTagContent          // the content for the tag
 	itemTagDelim            // delimiter separating name-content pairs or tags (,)
-	itemValueLeftDelim      // value left delimiter ({)
-	itemValueRightDelim     // value right delimiter (})
+	itemContentStartDelim   // content start delimiter ({)
+	itemContentStopDelim    // content stop delimiter (})
+	itemContentQuoteDelim   // content start/stop delimiter (")
 	itemConcat              // the concatination symbol (#)
 )
 
@@ -65,7 +66,7 @@ const (
 	commentDelim = "%"
 )
 
-// lex scans until an opening action delimiter, "@".
+// lex scans the input until an entry type delimiter, "@".
 func lex(l *lexer) stateFn {
 	for {
 		if strings.HasPrefix(l.input[l.pos:], "@") {
@@ -92,38 +93,45 @@ func lexEntryTypeDelim(l *lexer) stateFn {
 func lexEntryType(l *lexer) stateFn {
 	for {
 		switch r := l.next(); {
-		case r == eof || isSpace(r):
-			return l.errorf("unclosed action")
 		case isAlphaNumeric(r):
 			// absorb.
 		case r == '{':
 			l.backup()
 			l.emit(itemEntryType)
-			return lexLeftEntryDelim
+			return lexEntryStartDelim
+		case isSpace(r):
+			// discard spaces after entry type (to avoid emitting with spaces)
+			l.discard()
+		case r == eof:
+			return l.errorf("unclosed action")
 		default:
 			return l.errorf("unrecognized character in action: %#U", r)
 		}
 	}
 }
 
-// lexLeftEntryDelim scans the left entry delimiter, which is known to be present.
-func lexLeftEntryDelim(l *lexer) stateFn {
+// lexEntryStartDelim scans the entry delimiter, which is known to be present.
+func lexEntryStartDelim(l *lexer) stateFn {
 	l.emit1(itemEntryStartDelim) // absorb '{'
 	return lexCiteKey
 }
 
 // lexCiteKey scans the cite key.
 func lexCiteKey(l *lexer) stateFn {
+	l.ignoreSpaces()
 	for {
 		switch r := l.next(); {
-		case r == eof || isSpace(r):
-			return l.errorf("unclosed action")
-		case isAlphaNumeric(r) || r == '/':
+		case isAlphaNumeric(r):
 			// absorb.
 		case r == ',':
 			l.backup()
 			l.emit(itemCiteKey)
 			return lexTagDelim
+		case isSpace(r):
+			// discard spaces after cite key (to avoid emitting with spaces)
+			l.discard()
+		case r == eof:
+			return l.errorf("unclosed action")
 		default:
 			return l.errorf("unrecognized character in action: %#U", r)
 		}
@@ -133,39 +141,34 @@ func lexCiteKey(l *lexer) stateFn {
 // lexTagDelim scans the tag delimiter, which is known to be present.
 func lexTagDelim(l *lexer) stateFn {
 	l.emit1(itemTagDelim) // absorb ','
-	return lexTagKey
+	return lexTagName
 }
 
-// lexRightEntryDelim scans the right entry delimiter, which is known to be present.
-func lexRightEntryDelim(l *lexer) stateFn {
+// lexEntryStopDelim scans the entry stop delimiter, which is known to be present.
+func lexEntryStopDelim(l *lexer) stateFn {
 	l.emit1(itemEntryStopDelim) // absorb '}'
+	// start over, searching for the next bib entry
 	return lex
 }
 
-// lexTag scans the tag key, which can be any non-spaced string.
-func lexTagKey(l *lexer) stateFn {
-	keyNotFound := true
-	spaces := 0
+// lexTagName scans the tag name, which can be any non-spaced string.
+func lexTagName(l *lexer) stateFn {
+	// ignore spaces before tag name
+	l.ignoreSpaces()
 	for {
 		if strings.HasPrefix(l.input[l.pos:], "}") {
-			return lexRightEntryDelim
+			return lexEntryStopDelim
 		}
 		switch r := l.next(); {
 		case isAlphaNumeric(r):
-			// absorb tag key; we will back up and emit below
-			keyNotFound = false
-		case isSpace(r) && keyNotFound:
-			// ignore spaces until tag key is found
-			l.ignore()
+			// absorb tag name; we will back up and emit below
 		case r == '=':
-			// found key-value delimiter; emit tag key and remove surrounding spaces
-			l.backupN(spaces)
+			l.backup()
 			l.emit(itemTagName)
-			l.forwardN(spaces)
-			return lexTagKeyValueDelim
+			return lexTagNameContentDelim
 		case isSpace(r):
-			// count spaces on right of tag key
-			spaces++
+			// discard spaces after tag name (to avoid emitting with spaces)
+			l.discard()
 		case r == eof:
 			return l.errorf("unclosed action")
 		default:
@@ -174,21 +177,22 @@ func lexTagKey(l *lexer) stateFn {
 	}
 }
 
-// lexTagKeyValueDelim scans the tag key-value delimiter, which is known to be present.
-func lexTagKeyValueDelim(l *lexer) stateFn {
+// lexTagNameContentDelim scans the name-content delimiter, which is known to be present.
+func lexTagNameContentDelim(l *lexer) stateFn {
 	l.emit1(itemTagNameContentDelim) // absorb '='
-	return lexTagValueLeftDelim
+	return lexContentStartDelim
 }
 
-// lexTagValue scans the elements inside the main bib entry.
-func lexTagValueLeftDelim(l *lexer) stateFn {
+// lexContentStartDelim scans the name-content start delimiter.
+func lexContentStartDelim(l *lexer) stateFn {
+	l.ignoreSpaces()
 	for {
 		switch r := l.next(); {
-		case isSpace(r):
-			l.ignore()
+		// case isSpace(r):
+		// 	l.ignore()
 		case r == '{':
-			l.emit(itemValueLeftDelim)
-			return lexTagValue
+			l.emit(itemContentStartDelim)
+			return lexTagContent
 		case r == eof:
 			return l.errorf("unclosed action")
 		default:
@@ -197,8 +201,8 @@ func lexTagValueLeftDelim(l *lexer) stateFn {
 	}
 }
 
-// lexTagValue scans the elements inside a value.
-func lexTagValue(l *lexer) stateFn {
+// lexTagContent scans the elements inside the content.
+func lexTagContent(l *lexer) stateFn {
 	for {
 		switch r := l.next(); {
 		case isAlphaNumeric(r) || isSpace(r):
@@ -206,7 +210,7 @@ func lexTagValue(l *lexer) stateFn {
 		case r == '}':
 			l.backup()
 			l.emit(itemTagContent)
-			return lexValueRightDelim
+			return lexContentStopDelim
 		case r == eof:
 			return l.errorf("unclosed action")
 		default:
@@ -215,19 +219,22 @@ func lexTagValue(l *lexer) stateFn {
 	}
 }
 
-// lexKeyValueDelim scans the tag key-value delimiter, which is known to be present.
-func lexValueRightDelim(l *lexer) stateFn {
-	l.emit1(itemValueRightDelim) // absorb '}'
+// lexContentStopDelim scans the name-content stop delimiter, which is known to be present.
+func lexContentStopDelim(l *lexer) stateFn {
+	l.emit1(itemContentStopDelim) // absorb '}'
 	return lexTagDone
 }
 
+//TODO: this should be reusing lexTagDelim
+
 // lexTagDone scans the elements inside the main bib entry.
 func lexTagDone(l *lexer) stateFn {
+	l.ignoreSpaces()
 	for {
 		switch r := l.next(); {
 		case r == ',':
 			l.emit(itemTagDelim)
-			return lexTagKey
+			return lexTagName
 		case r == eof:
 			return l.errorf("unclosed action")
 		default:

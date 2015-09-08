@@ -16,9 +16,11 @@ import (
 
 var bibtext = `
 
-@article{journals/tdsc/zorfu/AndersonMRVM15,
-	author  ={Hein Meling},
-	title=  {Some Title},
+@article  {
+
+	journals/tdsc/zorfu/AndersonMRVM15  ,
+	author  ={Hein Meling}  ,
+	title  =  {Some Title},
 }
 
 `

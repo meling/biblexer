@@ -19,6 +19,7 @@ type lexer struct {
 	state stateFn   // the next lexing function to enter
 	pos   int       // current position in the input.
 	start int       // start position of this item.
+	skip  int       // number of rune's to skip (usually spaces)
 	width int       // width of last rune read from input.
 	items chan item // channel of scanned items.
 }
@@ -46,33 +47,46 @@ func (l *lexer) backup() {
 	l.pos -= l.width
 }
 
-// backupN steps back one rune and n spaces. Can only be called once per call of next.
-func (l *lexer) backupN(n int) {
-	l.pos -= l.width
-	l.pos -= n
+// discard skips the current rune that may appear after an item.
+// Typically this will be to discard spaces after an item.
+func (l *lexer) discard() {
+	_, w := utf8.DecodeRuneInString(l.input[l.pos:])
+	// add the width of the current rune to the skip count
+	l.skip += w
 }
 
-// forwardN steps forward n spaces. Can only be called once per call of next.
-func (l *lexer) forwardN(n int) {
-	l.pos += n
+// ignore skips over the pending input before this point.
+func (l *lexer) ignore() {
 	l.start = l.pos
+}
+
+// ignore skips over the pending input before this point.
+func (l *lexer) ignoreSpaces() {
+	for {
+		switch r := l.next(); {
+		case isSpace(r):
+			l.ignore()
+		default:
+			l.backup()
+			return
+		}
+	}
 }
 
 // emit passes an item back to the client.
 func (l *lexer) emit(t itemType) {
-	l.items <- item{t, l.input[l.start:l.pos]}
+	// backup pos if there are runes to skip
+	pos := l.pos - l.skip
+	l.items <- item{t, l.input[l.start:pos]}
 	l.start = l.pos
+	// reset the skip counter
+	l.skip = 0
 }
 
 // emit passes an item back to the client.
 func (l *lexer) emit1(t itemType) {
 	l.pos++
 	l.emit(t)
-}
-
-// ignore skips over the pending input before this point.
-func (l *lexer) ignore() {
-	l.start = l.pos
 }
 
 // accept consumes the next rune if it's from the valid set.
@@ -115,7 +129,7 @@ func isSpace(r rune) bool {
 
 // isAlphaNumeric reports whether r is an alphabetic, digit, or underscore.
 func isAlphaNumeric(r rune) bool {
-	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
+	return r == '_' || r == '/' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 // nextItem returns the next item from the input.
