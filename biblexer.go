@@ -91,7 +91,7 @@ func lexEntryType(l *lexer) stateFn {
 	for {
 		switch r := l.next(); {
 		case isAlphaNumeric(r):
-			// absorb.
+			// absorb and emit when delimiter is found
 		case r == '{':
 			l.backup()
 			l.emit(itemEntryType)
@@ -113,8 +113,8 @@ func lexCiteKey(l *lexer) stateFn {
 	l.ignoreSpaces()
 	for {
 		switch r := l.next(); {
-		case isAlphaNumeric(r):
-			// absorb.
+		case l.isUnbrokenAlphaNumericToken(r):
+			// absorb and emit when delimiter is found
 		case r == ',':
 			l.backup()
 			l.emit(itemCiteKey)
@@ -142,7 +142,7 @@ func lexTagName(l *lexer) stateFn {
 		}
 		switch r := l.next(); {
 		case isAlphaNumeric(r):
-			// absorb tag name; we will back up and emit below
+			// absorb and emit when delimiter is found
 		case r == '=':
 			l.backup()
 			l.emit(itemTagName)
@@ -180,7 +180,7 @@ func lexTagContent(l *lexer) stateFn {
 	for {
 		switch r := l.next(); {
 		case isAlphaNumeric(r) || isSpace(r):
-			// absorb
+			// absorb and emit when delimiter is found
 		case r == '}':
 			l.backup()
 			l.emit(itemTagContent)

@@ -132,6 +132,12 @@ func isAlphaNumeric(r rune) bool {
 	return r == '_' || r == '/' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
+// isUnbrokenAlphaNumericToken reports whether r is part of an unbroken
+// sequence of  alphanumeric characters.
+func (l *lexer) isUnbrokenAlphaNumericToken(r rune) bool {
+	return isAlphaNumeric(r) && l.skip == 0
+}
+
 // nextItem returns the next item from the input.
 func (l *lexer) nextItem() item {
 	for {

@@ -8,6 +8,8 @@ import "testing"
 // "@ article", "pass", Actually works with bibtex command
 // "@art icle", "fail",
 
+//TODO: Make bib entries  that should fail.
+
 //TODO: Make test case that for some bibtex input
 // compares against an expected sequence of itemType values.
 
