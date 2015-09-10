@@ -43,21 +43,9 @@ const (
 	itemConcat               // the concatination symbol (#)
 )
 
-var key = map[string]itemType{
-	"citekey": itemCiteKey,
-	"@":       itemEntryTypeDelim,
-	"{":       itemEntryStartDelim,
-	"}":       itemEntryStopDelim,
-	"#":       itemConcat,
-	",":       itemTagDelim,
-	"=":       itemTagNameContentDelim,
-}
-
 //TODO: Add support for ignoring comments later
 //TODO: Add support for @string, @preamble, @comment
 //TODO: Add support for concatination #
-//TODO: Add support for quote-based ("") content
-//TODO: Add support for braces in content
 
 // state functions
 
@@ -90,7 +78,7 @@ func lexEntryType(l *lexer) stateFn {
 	l.ignoreSpaces()
 	for {
 		switch r := l.next(); {
-		case isAlphaNumeric(r):
+		case l.isUnbrokenAlphaNumericToken(r):
 			// absorb and emit when delimiter is found
 		case r == '{':
 			l.backup()
@@ -141,7 +129,7 @@ func lexTagName(l *lexer) stateFn {
 			return lexStart
 		}
 		switch r := l.next(); {
-		case isAlphaNumeric(r):
+		case l.isUnbrokenAlphaNumericToken(r):
 			// absorb and emit when delimiter is found
 		case r == '=':
 			l.backup()
@@ -164,6 +152,9 @@ func lexContentStartDelim(l *lexer) stateFn {
 	l.ignoreSpaces()
 	for {
 		switch r := l.next(); {
+		case r == '"':
+			l.emit(itemTagContentQuoteDelim)
+			return lexTagContent
 		case r == '{':
 			l.emit(itemTagContentStartDelim)
 			return lexTagContent
@@ -177,10 +168,22 @@ func lexContentStartDelim(l *lexer) stateFn {
 
 // lexTagContent scans the elements inside the content.
 func lexTagContent(l *lexer) stateFn {
+	braces := 0
 	for {
 		switch r := l.next(); {
 		case isAlphaNumeric(r) || isSpace(r):
 			// absorb and emit when delimiter is found
+		case r == '{':
+			braces++
+			// absorb internal brace
+		case r == '}' && braces > 0:
+			braces--
+			// absorb internal brace
+		case r == '"':
+			l.backup()
+			l.emit(itemTagContent)
+			l.emit1(itemTagContentQuoteDelim) // absorb '"'
+			return lexTagDelim
 		case r == '}':
 			l.backup()
 			l.emit(itemTagContent)
@@ -201,6 +204,10 @@ func lexTagDelim(l *lexer) stateFn {
 		switch r := l.next(); {
 		case r == ',':
 			l.emit(itemTagDelim)
+			return lexTagName
+		case r == '}':
+			// handle last name-content pair without ',' delimiter in lexTagName
+			l.backup()
 			return lexTagName
 		case r == eof:
 			return l.errorf("unexpected eof at line %d", l.lineNumber())

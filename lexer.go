@@ -60,7 +60,7 @@ func (l *lexer) ignore() {
 	l.start = l.pos
 }
 
-// ignore skips over the pending input before this point.
+// ignoreSpaces skips over the remaining seqeunce of spaces.
 func (l *lexer) ignoreSpaces() {
 	for {
 		switch r := l.next(); {
@@ -129,11 +129,12 @@ func isSpace(r rune) bool {
 
 // isAlphaNumeric reports whether r is an alphabetic, digit, or underscore.
 func isAlphaNumeric(r rune) bool {
-	return r == '_' || r == '/' || unicode.IsLetter(r) || unicode.IsDigit(r)
+	return r == '_' || r == '/' || r == '\\' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 // isUnbrokenAlphaNumericToken reports whether r is part of an unbroken
-// sequence of  alphanumeric characters.
+// sequence of alphanumeric characters. Any call to discard prior to calling
+// isUnbrokenAlphaNumericToken will break the sequence; it will return false.
 func (l *lexer) isUnbrokenAlphaNumericToken(r rune) bool {
 	return isAlphaNumeric(r) && l.skip == 0
 }
@@ -145,13 +146,16 @@ func (l *lexer) nextItem() item {
 		case item := <-l.items:
 			return item
 		default:
+			if l.state == nil {
+				return item{itemEOF, ""}
+			}
 			l.state = l.state(l)
 		}
 	}
 }
 
 // NewLexer creates a new scanner for the input string.
-func NewLexer(name, input string) *lexer {
+func newLexer(name, input string) *lexer {
 	l := &lexer{
 		name:  name,
 		input: input,
