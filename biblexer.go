@@ -1,4 +1,4 @@
-package bibtex
+package biblexer
 
 import (
 	"fmt"
