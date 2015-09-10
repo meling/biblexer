@@ -129,7 +129,7 @@ func isSpace(r rune) bool {
 
 // isAlphaNumeric reports whether r is an alphabetic, digit, or underscore.
 func isAlphaNumeric(r rune) bool {
-	return r == '_' || r == '/' || r == '\\' || unicode.IsLetter(r) || unicode.IsDigit(r)
+	return r == '.' || r == '/' || r == '\\' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
 // isUnbrokenAlphaNumericToken reports whether r is part of an unbroken

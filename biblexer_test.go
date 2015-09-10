@@ -172,6 +172,18 @@ var expectedSet3 = []itemType{
 	itemEOF,
 }
 
+var passSet4 = []string{
+	`@article{c72, author = "Mrs. Gopher" # " and Mr. Pike"}`,
+	`@string{ gopher = "Mrs. Gopher"	}
+	 @article{c72, author = gopher #" and Mr. Pike"}`,
+	`@string{ gopher = "Mrs. Gopher" }
+	 @string{ pike = "Mr. Gopher"	}
+	 @article{c72, author = gopher # pike # " and Mr. Micky"}`,
+	// `@string{ gopher = "Mrs. Gopher" }
+	//  @string{ pike = "Mr. Gopher"	}
+	//  @article{c72, author = gopher # pike }`, // KNOWN ISSUE: CANNOT END WITH STRING MACRO
+}
+
 var failSet = [...]string{
 	`@article{mycitekey1972,
 	aut  hor = {Hein Meling},
@@ -207,6 +219,15 @@ func TestLexer(t *testing.T) {
 	doTest(t, passSet1, expectedSet1)
 	doTest(t, passSet2, expectedSet2)
 	doTest(t, passSet3, expectedSet3)
+}
+
+func TestLexerExperimental(t *testing.T) {
+	for i := 0; i < len(passSet4); i++ {
+		l := newLexer("bib", passSet4[i])
+		for it := l.nextItem(); it.typ != itemEOF; it = l.nextItem() {
+			fmt.Println(it)
+		}
+	}
 }
 
 func TestFailingLexer(t *testing.T) {

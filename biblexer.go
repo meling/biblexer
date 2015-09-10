@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+//TODO: Add support for ignoring comments later
+//TODO: Add support @preamble, @comment
+
 // itemType identifies the type of lex items.
 type itemType int
 
@@ -41,11 +44,9 @@ const (
 	itemTagContentStopDelim  // content stop delimiter (})
 	itemTagContentQuoteDelim // content start/stop delimiter (")
 	itemConcat               // the concatination symbol (#)
+	itemStringKey            // string macro key
+	itemStringDelim          // string macro delimiter '='
 )
-
-//TODO: Add support for ignoring comments later
-//TODO: Add support for @string, @preamble, @comment
-//TODO: Add support for concatination #
 
 // state functions
 
@@ -108,6 +109,11 @@ func lexCiteKey(l *lexer) stateFn {
 			l.emit(itemCiteKey)
 			l.emit1(itemTagDelim) // absorb ','
 			return lexTagName
+		case r == '=': // @string macro support
+			l.backup()
+			l.emit(itemStringKey)
+			l.emit1(itemStringDelim) // absorb '='
+			return lexTagContentStartDelim
 		case isSpace(r):
 			// discard spaces after cite key (to avoid emitting with spaces)
 			l.discard()
@@ -135,7 +141,7 @@ func lexTagName(l *lexer) stateFn {
 			l.backup()
 			l.emit(itemTagName)
 			l.emit1(itemTagNameContentDelim) // absorb '='
-			return lexContentStartDelim
+			return lexTagContentStartDelim
 		case isSpace(r):
 			// discard spaces after tag name (to avoid emitting with spaces)
 			l.discard()
@@ -147,17 +153,27 @@ func lexTagName(l *lexer) stateFn {
 	}
 }
 
-// lexContentStartDelim scans the name-content start delimiter.
-func lexContentStartDelim(l *lexer) stateFn {
+// lexTagContentStartDelim scans the name-content start delimiter.
+func lexTagContentStartDelim(l *lexer) stateFn {
 	l.ignoreSpaces()
 	for {
 		switch r := l.next(); {
+		case l.isUnbrokenAlphaNumericToken(r):
+			// absorb and emit when delimiter is found
 		case r == '"':
 			l.emit(itemTagContentQuoteDelim)
 			return lexTagContent
 		case r == '{':
 			l.emit(itemTagContentStartDelim)
 			return lexTagContent
+		case r == '#': // Concatination support for @string macros
+			l.backup()
+			l.emit(itemStringKey)
+			l.emit1(itemConcat) // absorb '#'
+			return lexTagContentStartDelim
+		case isSpace(r):
+			// discard spaces after tag name (to avoid emitting with spaces)
+			l.discard()
 		case r == eof:
 			return l.errorf("unexpected eof at line %d", l.lineNumber())
 		default:
@@ -168,6 +184,7 @@ func lexContentStartDelim(l *lexer) stateFn {
 
 // lexTagContent scans the elements inside the content.
 func lexTagContent(l *lexer) stateFn {
+	l.ignoreSpaces()
 	braces := 0
 	for {
 		switch r := l.next(); {
@@ -209,6 +226,11 @@ func lexTagDelim(l *lexer) stateFn {
 			// handle last name-content pair without ',' delimiter in lexTagName
 			l.backup()
 			return lexTagName
+		case r == '#': // Concatination support for content strings
+			l.backup()
+			l.emit(itemTagContent)
+			l.emit1(itemConcat) // absorb '#'
+			return lexTagContentStartDelim
 		case r == eof:
 			return l.errorf("unexpected eof at line %d", l.lineNumber())
 		default:
