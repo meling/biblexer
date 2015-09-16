@@ -38,15 +38,14 @@ const (
 	itemEntryStopDelim       // entry stop delimiter (})
 	itemCiteKey              // the cite key
 	itemTagName              // the tag name (on left of =)
-	itemTagNameContentDelim  // delimiter separating name and content (=)
+	itemEqual                // delimiter separating name and content (=)
 	itemTagContent           // the content for the tag
 	itemTagDelim             // delimiter separating name-content pairs or tags (,)
 	itemTagContentStartDelim // content start delimiter ({)
 	itemTagContentStopDelim  // content stop delimiter (})
-	itemTagContentQuoteDelim // content start/stop delimiter (") TODO: rename to itemQuoteDelim
+	itemQuoteDelim           // content start/stop delimiter (")
 	itemConcat               // the concatination symbol (#)
 	itemStringKey            // string macro key
-	itemStringDelim          // string macro delimiter '=' TODO: rename/Merge with TagNameContentDelim??
 )
 
 // state functions
@@ -113,7 +112,7 @@ func lexCiteKey(l *lexer) stateFn {
 		case r == '=': // @string macro support
 			l.backup()
 			l.emit(itemStringKey)
-			l.emit1(itemStringDelim) // absorb '='
+			l.emit1(itemEqual) // absorb '='
 			return lexTagContentStartDelim
 		case isSpace(r):
 			// discard spaces after cite key (to avoid emitting with spaces)
@@ -141,7 +140,7 @@ func lexTagName(l *lexer) stateFn {
 		case r == '=':
 			l.backup()
 			l.emit(itemTagName)
-			l.emit1(itemTagNameContentDelim) // absorb '='
+			l.emit1(itemEqual) // absorb '='
 			return lexTagContentStartDelim
 		case isSpace(r):
 			// discard spaces after tag name (to avoid emitting with spaces)
@@ -162,7 +161,7 @@ func lexTagContentStartDelim(l *lexer) stateFn {
 		case l.isUnbrokenAlphaNumericToken(r):
 			// absorb and emit when delimiter is found
 		case r == '"':
-			l.emit(itemTagContentQuoteDelim)
+			l.emit(itemQuoteDelim)
 			return lexTagContent
 		case r == '{':
 			l.emit(itemTagContentStartDelim)
@@ -205,7 +204,7 @@ func lexTagContent(l *lexer) stateFn {
 		case r == '"':
 			l.backup()
 			l.emit(itemTagContent)
-			l.emit1(itemTagContentQuoteDelim) // absorb '"'
+			l.emit1(itemQuoteDelim) // absorb '"'
 			return lexTagDelim
 		case r == '}':
 			l.backup()
