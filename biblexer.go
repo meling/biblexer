@@ -40,7 +40,7 @@ const (
 	itemTagName              // the tag name (on left of =)
 	itemEqual                // delimiter separating name and content (=)
 	itemTagContent           // the content for the tag
-	itemTagDelim             // delimiter separating name-content pairs or tags (,)
+	itemComma                // delimiter separating name-content pairs or tags (,)
 	itemTagContentStartDelim // content start delimiter ({)
 	itemTagContentStopDelim  // content stop delimiter (})
 	itemQuoteDelim           // content start/stop delimiter (")
@@ -107,7 +107,7 @@ func lexCiteKey(l *lexer) stateFn {
 		case r == ',':
 			l.backup()
 			l.emit(itemCiteKey)
-			l.emit1(itemTagDelim) // absorb ','
+			l.emit1(itemComma) // absorb ','
 			return lexTagName
 		case r == '=': // @string macro support
 			l.backup()
@@ -225,7 +225,7 @@ func lexTagDelim(l *lexer) stateFn {
 	for {
 		switch r := l.next(); {
 		case r == ',':
-			l.emit(itemTagDelim)
+			l.emit(itemComma)
 			return lexTagName
 		case r == '}':
 			// handle last name-content pair without ',' delimiter in lexTagName
