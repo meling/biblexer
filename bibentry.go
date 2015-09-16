@@ -7,7 +7,7 @@ import (
 
 // type bibtype string
 
-//go:generate stringer -type=bibtype
+//XXgo:generate stringer -type=bibtype
 // const (
 // 	article bibtype = iota
 // 	book

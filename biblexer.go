@@ -27,6 +27,7 @@ func (i item) String() string {
 	return fmt.Sprintf("%q", i.val)
 }
 
+//go:generate stringer -type=itemType
 const (
 	itemError itemType = iota // error occurred; value is text of error
 	itemEOF
@@ -42,10 +43,10 @@ const (
 	itemTagDelim             // delimiter separating name-content pairs or tags (,)
 	itemTagContentStartDelim // content start delimiter ({)
 	itemTagContentStopDelim  // content stop delimiter (})
-	itemTagContentQuoteDelim // content start/stop delimiter (")
+	itemTagContentQuoteDelim // content start/stop delimiter (") TODO: rename to itemQuoteDelim
 	itemConcat               // the concatination symbol (#)
 	itemStringKey            // string macro key
-	itemStringDelim          // string macro delimiter '='
+	itemStringDelim          // string macro delimiter '=' TODO: rename/Merge with TagNameContentDelim??
 )
 
 // state functions
@@ -228,7 +229,7 @@ func lexTagDelim(l *lexer) stateFn {
 			return lexTagName
 		case r == '#': // Concatination support for content strings
 			l.backup()
-			l.emit(itemTagContent)
+			// l.emit(itemTagContent) //TODO: This was a bug in one case, check others
 			l.emit1(itemConcat) // absorb '#'
 			return lexTagContentStartDelim
 		case r == eof:

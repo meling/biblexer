@@ -174,16 +174,175 @@ var expectedSet3 = []itemType{
 
 var passSet4 = []string{
 	`@article{c72, author = "Mrs. Gopher" # " and Mr. Pike"}`,
+}
+
+// expectedSet4 is the sequence of tokens expected for each entry in passSet4.
+var expectedSet4 = []itemType{
+	itemEntryTypeDelim,
+	itemEntryType,
+	itemEntryStartDelim,
+	itemCiteKey,
+	itemTagDelim,
+	itemTagName,
+	itemTagNameContentDelim,
+	itemTagContentQuoteDelim,
+	itemTagContent,
+	itemTagContentQuoteDelim,
+	itemConcat,
+	itemTagContentQuoteDelim,
+	itemTagContent,
+	itemTagContentQuoteDelim,
+	itemEntryStopDelim,
+	itemEOF,
+}
+
+var passSet5 = []string{
 	`@string{ gopher = "Mrs. Gopher"	}
 	 @article{c72, author = gopher #" and Mr. Pike"}`,
+}
+
+// expectedSet5 is the sequence of tokens expected for each entry in passSet5.
+var expectedSet5 = []itemType{
+	itemEntryTypeDelim,
+	itemEntryType,
+	itemEntryStartDelim,
+	itemStringKey,
+	itemStringDelim,
+	itemTagContentQuoteDelim,
+	itemTagContent,
+	itemTagContentQuoteDelim,
+	itemEntryStopDelim,
+	itemEntryTypeDelim,
+	itemEntryType,
+	itemEntryStartDelim,
+	itemCiteKey,
+	itemTagDelim,
+	itemTagName,
+	itemTagNameContentDelim,
+	itemStringKey,
+	itemConcat,
+	itemTagContentQuoteDelim,
+	itemTagContent,
+	itemTagContentQuoteDelim,
+	itemEntryStopDelim,
+	itemEOF,
+}
+
+var passSet6 = []string{
 	`@string{ gopher = "Mrs. Gopher"	}
  	 @article{c72, author = gopher # { and Mr. Pike}}`,
+}
+
+// expectedSet6 is the sequence of tokens expected for each entry in passSet6.
+var expectedSet6 = []itemType{
+	itemEntryTypeDelim,
+	itemEntryType,
+	itemEntryStartDelim,
+	itemStringKey,
+	itemStringDelim,
+	itemTagContentQuoteDelim,
+	itemTagContent,
+	itemTagContentQuoteDelim,
+	itemEntryStopDelim,
+	itemEntryTypeDelim,
+	itemEntryType,
+	itemEntryStartDelim,
+	itemCiteKey,
+	itemTagDelim,
+	itemTagName,
+	itemTagNameContentDelim,
+	itemStringKey,
+	itemConcat,
+	itemTagContentStartDelim,
+	itemTagContent,
+	itemTagContentStopDelim,
+	itemEntryStopDelim,
+	itemEOF,
+}
+
+var passSet7 = []string{
 	`@string{ gopher = "Mrs. Gopher" }
 	 @string{ pike = "Mr. Gopher"	}
 	 @article{c72, author = gopher # pike # " and Mr. Micky"}`,
-	// `@string{ gopher = "Mrs. Gopher" }
-	//  @string{ pike = "Mr. Gopher"	}
-	//  @article{c72, author = gopher # pike }`, // KNOWN ISSUE: CANNOT END WITH STRING MACRO
+}
+
+// expectedSet7 is the sequence of tokens expected for each entry in passSet7.
+var expectedSet7 = []itemType{
+	itemEntryTypeDelim, // @string{ gopher = "Mrs. Gopher" }
+	itemEntryType,
+	itemEntryStartDelim,
+	itemStringKey,
+	itemStringDelim,
+	itemTagContentQuoteDelim,
+	itemTagContent,
+	itemTagContentQuoteDelim,
+	itemEntryStopDelim,
+	itemEntryTypeDelim, // @string{ pike = "Mr. Gopher"	}
+	itemEntryType,
+	itemEntryStartDelim,
+	itemStringKey,
+	itemStringDelim,
+	itemTagContentQuoteDelim,
+	itemTagContent,
+	itemTagContentQuoteDelim,
+	itemEntryStopDelim,
+	itemEntryTypeDelim, // @article{c72, author = gopher # pike # " and Mr. Micky"}
+	itemEntryType,
+	itemEntryStartDelim,
+	itemCiteKey,
+	itemTagDelim,
+	itemTagName,
+	itemTagNameContentDelim,
+	itemStringKey,
+	itemConcat,
+	itemStringKey,
+	itemConcat,
+	itemTagContentQuoteDelim,
+	itemTagContent,
+	itemTagContentQuoteDelim,
+	itemEntryStopDelim,
+	itemEOF,
+}
+
+var passSet8 = []string{
+	`@string{ gopher = "Mrs. Gopher" }
+	 @string{ pike = "Mr. Gopher"	}
+	 @article{c72, author = gopher # pike }`, // KNOWN ISSUE: CANNOT END WITH STRING MACRO
+}
+
+// expectedSet8 is the sequence of tokens expected for each entry in passSet8.
+var expectedSet8 = []itemType{
+	itemEntryTypeDelim, // @string{ gopher = "Mrs. Gopher" }
+	itemEntryType,
+	itemEntryStartDelim,
+	itemStringKey,
+	itemStringDelim,
+	itemTagContentQuoteDelim,
+	itemTagContent,
+	itemTagContentQuoteDelim,
+	itemEntryStopDelim,
+	itemEntryTypeDelim, // @string{ pike = "Mr. Gopher"	}
+	itemEntryType,
+	itemEntryStartDelim,
+	itemStringKey,
+	itemStringDelim,
+	itemTagContentQuoteDelim,
+	itemTagContent,
+	itemTagContentQuoteDelim,
+	itemEntryStopDelim,
+	itemEntryTypeDelim, // @article{c72, author = gopher # pike }
+	itemEntryType,
+	itemEntryStartDelim,
+	itemCiteKey,
+	itemTagDelim,
+	itemTagName,
+	itemTagNameContentDelim,
+	itemStringKey,
+	itemConcat,
+	itemStringKey,
+	itemConcat,
+	itemEntryStopDelim,
+	itemEOF,
 }
 
 var failSet = [...]string{
@@ -221,11 +380,16 @@ func TestLexer(t *testing.T) {
 	doTest(t, passSet1, expectedSet1)
 	doTest(t, passSet2, expectedSet2)
 	doTest(t, passSet3, expectedSet3)
+	doTest(t, passSet4, expectedSet4)
+	doTest(t, passSet5, expectedSet5)
+	doTest(t, passSet6, expectedSet6)
+	doTest(t, passSet7, expectedSet7)
+	doTest(t, passSet8, expectedSet8)
 }
 
 func TestLexerExperimental(t *testing.T) {
-	for i := 0; i < len(passSet4); i++ {
-		l := newLexer("bib", passSet4[i])
+	for i := 0; i < len(passSet8); i++ {
+		l := newLexer("bib", passSet8[i])
 		for it := l.nextItem(); it.typ != itemEOF; it = l.nextItem() {
 			fmt.Println(it)
 		}
@@ -250,7 +414,6 @@ func doTest(t *testing.T, passSet []string, expectedSet []itemType) {
 		l := newLexer("bib", passSet[i])
 		for j := 0; j < len(expectedSet); j++ {
 			it := l.nextItem()
-			// fmt.Println(it)
 			if it.typ != expectedSet[j] {
 				t.Errorf("Got %s, expected %s", it, expectedSet[j])
 			}
