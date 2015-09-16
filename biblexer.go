@@ -167,6 +167,11 @@ func lexTagContentStartDelim(l *lexer) stateFn {
 		case r == '{':
 			l.emit(itemTagContentStartDelim)
 			return lexTagContent
+		case r == '}':
+			// handle @string key as the last element of a tag
+			l.backup()
+			l.emit(itemStringKey)
+			return lexTagName
 		case r == '#': // Concatination support for @string macros
 			l.backup()
 			l.emit(itemStringKey)

@@ -340,7 +340,6 @@ var expectedSet8 = []itemType{
 	itemStringKey,
 	itemConcat,
 	itemStringKey,
-	itemConcat,
 	itemEntryStopDelim,
 	itemEOF,
 }
@@ -385,15 +384,6 @@ func TestLexer(t *testing.T) {
 	doTest(t, passSet6, expectedSet6)
 	doTest(t, passSet7, expectedSet7)
 	doTest(t, passSet8, expectedSet8)
-}
-
-func TestLexerExperimental(t *testing.T) {
-	for i := 0; i < len(passSet8); i++ {
-		l := newLexer("bib", passSet8[i])
-		for it := l.nextItem(); it.typ != itemEOF; it = l.nextItem() {
-			fmt.Println(it)
-		}
-	}
 }
 
 func TestFailingLexer(t *testing.T) {
